@@ -8,19 +8,16 @@ except ImportError:
     import simplejson as json
 
 from celery import Celery
-#from flask import request, jsonify
 
 filterKeywords = ['han', 'hon', 'den', 'det', 'denna', 'denne', 'hen']
 wordcount={}
-#counter = 0
-#count = 0
-
-
 
 #create a celery application instance that connects to the default RabbitMQ service
 app = Celery('tasks', backend='amqp', broker='amqp://')
 
-
+#the job of this celery task function is to count the frequncy of the keywords
+#in each json format file that has been passed to it and rutren the results
+#as dictionary list 
 @app.task
 def count_keywords(tweets_filename):
         #global counter
@@ -28,19 +25,21 @@ def count_keywords(tweets_filename):
 	for line in tweets_file:
 	    try:
 		# Read in one line of the file, convert it into a json object 
-		tweet = json.loads(line)
-		for word in filterKeywords:
-		    if (word in tweet["text"].split() and ('RT' not in tweet["text"].split())):  #ignore RT retweet
-		      #print('Tweet found filtered by  ' + word )
-		      #print tweet['text']
-		      #counter +=1
-		      if word not in wordcount:
-		            wordcount[word] = 1
-		      else:
-		            wordcount[word] += 1
+		tweet = json.loads(line.strip())
+		for keyword in filterKeywords:
+                    if tweet.has_key("retweeted_status") or ('RT' in tweet["text"].split()) :   #ignore retweeted tweet
+                          continue
+	            else:
+                         for word in tweet["text"].split():
+                           if keyword == word.lower(): 
+			      if keyword not in wordcount:
+			         wordcount[keyword] = 1
+			      else:
+			        wordcount[keyword] += 1
+                           else:
+                              continue
 	    except:
 		# read in a line is not in JSON format (sometimes error occured)
 	     continue
 
 	return wordcount
-        #return flask.jsonify(wordcount)
